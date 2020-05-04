@@ -26,8 +26,10 @@ class ChangeVirementPage extends React.Component {
         this.state = {
             canSubmit: false,
             memberId: '',
+            memberName: '',
             bankTransferReference: '',
             amount: '',
+            description: 'Change par virement',
         }
     }
 
@@ -39,13 +41,39 @@ class ChangeVirementPage extends React.Component {
         this.setState({canSubmit: false})
     }
 
+    handleMemberIdChange = (name, value) => {
+        if (value.length == 6) {
+            // On fait une requête pour avoir le nom de l'adhérent-e
+            var url = getAPIBaseURL + "members/?login=" + value.toUpperCase()
+            var promise = (response) => {
+                var member = response[0]
+                var name = ''
+                if (member['login'][0] == 'E') {
+                    name = member['firstname'] + ' ' + member['lastname']
+                } else {
+                    name = member['company']
+                }
+                this.setState({
+                    memberId: member['login'],
+                    memberName: name,
+                    bankTransferReference: moment().format() + '-' + member['login']
+                }, this.validateForm)
+            }
+            fetchAuth(url, 'GET', promise)
+        } else {
+            this.setState({memberName: ''})
+        }
+    }
+
     handleChange = (name, value) => {
         this.setState({[name]: value}, this.validateForm)
     }
 
     validateForm = () => {
-        if (this.state.memberId && this.state.bankTransferReference
-            && this.state.amount && isPositiveNumeric(null, this.state.amount)) {
+        if (this.state.memberId && this.state.memberName
+            && this.state.bankTransferReference
+            && this.state.amount && isPositiveNumeric(null, this.state.amount)
+            && this.state.description) {
             this.enableButton()
         } else {
             this.disableButton()
@@ -59,6 +87,7 @@ class ChangeVirementPage extends React.Component {
         postData.member_login = this.state.memberId
         postData.bank_transfer_reference = this.state.bankTransferReference
         postData.amount = this.state.amount
+        postData.description = this.state.description
 
         var promise = (response) => {
             this.refs.container.success(
@@ -113,14 +142,24 @@ class ChangeVirementPage extends React.Component {
                         }}
                         elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-5']}
                         onBlur={this.handleBlur}
-                        onChange={this.handleChange}
+                        onChange={this.handleMemberIdChange}
                         required
+                    />
+                    <Input
+                        name="memberName"
+                        data-eusko="change-virement-member-name"
+                        value={this.state.memberName}
+                        label={__("Nom")}
+                        type="text"
+                        elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-5']}
+                        required
+                        readOnly
                     />
                     <Input
                         name="bankTransferReference"
                         data-eusko="change-virement-bank-transfer-reference"
                         value={this.state.bankTransferReference}
-                        label={__("Référence du virement")}
+                        label={__("Référence interne")}
                         type="text"
                         elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-5']}
                         onBlur={this.handleBlur}
@@ -137,6 +176,17 @@ class ChangeVirementPage extends React.Component {
                         validationErrors={{
                             isPositiveNumeric: __("Montant invalide.")
                         }}
+                        elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-5']}
+                        onBlur={this.handleBlur}
+                        onChange={this.handleChange}
+                        required
+                    />
+                    <Input
+                        name="description"
+                        data-eusko="change-virement-description"
+                        value={this.state.description}
+                        label={__("Libellé")}
+                        type="text"
                         elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-5']}
                         onBlur={this.handleBlur}
                         onChange={this.handleChange}
